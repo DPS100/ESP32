@@ -3,7 +3,9 @@
 
 #include <PubSubClient.h>
 #include <vector>
+#include <Arduino.h>
 #include "sensor.h"
+#include "multiMeasurementSensor.h"
 #include "secrets.h"
 
 // #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
@@ -24,6 +26,7 @@ class Module{
         static Module* getInstance();
         static Module* getInstance(bool deferConnection);
         Module* registerSensor(Sensor* sensor);
+        Module* registerMultiSensor(IMultiMeasurementSensor* multiSensor);
         Module* blink(int duration, int freq);
         Module* connect();
         bool broadcast();
@@ -45,7 +48,7 @@ class Module{
         String topic = "sensor_service/" + mac + "/";
         // void callback(char* topic, byte* payload, unsigned int length);
         bool sendMessage(int sensorID, float measurement, int time);
-        bool registeredBackend = true;
+        bool registeredBackend = false;
 };
 
 #endif

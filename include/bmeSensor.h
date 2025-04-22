@@ -3,17 +3,16 @@
 
 #include <Zanshin_BME680.h>
 #include <Arduino.h>
+#include "multiMeasurementSensor.h"
 
-class BMESensor {
+class BMESensor : public MultiMeasurementSensor<int32_t> {
     public:
 
-        static
-
         BME680_Class BME680;
-        int32_t temp, humidity, pressure, gas;
-        int8_t measured = 0b0000;
+        // int32_t temp, humidity, pressure, gas;
+        const std::vector<String> names = {"temp", "humidity", "pressure", "gas"};
 
-        BMESensor() {
+        BMESensor() : MultiMeasurementSensor("BME680", names) {
             while (!BME680.begin(I2C_STANDARD_MODE)) {
             Serial.println(F("BME680 init failed"));
                 delay(1000);
@@ -25,8 +24,8 @@ class BMESensor {
             BME680.setGas(320, 150);
         }
 
-        float takeMeasurement() {
-            BME680.getSensorData(temp, humidity, pressure, gas);
+        void takeMeasurements() override {
+            BME680.getSensorData(readings[0], readings[1], readings[2], readings[3]);
         }
 
         

@@ -10,6 +10,7 @@
 #include "lightSensor.h"
 #include "co2Sensor.h"
 #include "debugSensor.h"
+#include "bmeSensor.h"
 
 Module* module = nullptr;
 
@@ -17,19 +18,19 @@ void setup()
 {
     Serial.begin(115200);
     delay(2000);
-    Serial.println("BEEJ");
-    delay(2000);
-    Serial.println("BEEJ2");
+    Serial.println("Initializing...");
 
     module = Module::getInstance(true)
         ->registerSensor(new DebugSensor())
         ->registerSensor(new LightSensor()) // TODO singleton on pins? Throw error? Throw errors to broker?
         ->registerSensor(new CO2Sensor())
+        ->registerMultiSensor(new BMESensor())
         ->connect() // TODO connect to broker BEFORE registering to throw errors to server...
     ;
 }
 
 void loop() {
-    Serial.println("Begun");
+    Serial.println("Begun"); // TODO define sleep time between broadcasts
+    // TODO ISR/non blocking for sensor readings
     module->broadcast(); // TODO broker reconnect attempt if disconnected
 }

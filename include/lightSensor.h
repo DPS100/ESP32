@@ -13,7 +13,7 @@ class LightSensor : public Sensor {
         }
 
         float takeMeasurement() override {
-            return analogRead(lightPin);
+            return (float)analogRead(lightPin);
         }
 };
 

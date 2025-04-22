@@ -13,7 +13,7 @@ class CO2Sensor : public Sensor {
         }
 
         float takeMeasurement() override {
-            return analogRead(gasConcPin);
+            return (float)analogRead(gasConcPin);
         }
 };
 

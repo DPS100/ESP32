@@ -88,15 +88,12 @@ Module* Module::connect() {
         Serial.println("HTTP Response code:\n");
         Serial.println(statusCode);
 
-        registeredBackend = (statusCode == 200 || statusCode == 409);
-        if(!registeredBackend) exit(1);
-
-        // Optionally: read and print response
         String response = http.responseBody();
         Serial.println("Response: \n");
         Serial.println(response.c_str());
-
-        // connect();
+        
+        registeredBackend = (statusCode == 200 || statusCode == 409);
+        if(!registeredBackend) exit(1);
     }
     
 
@@ -118,12 +115,23 @@ Module* Module::connect() {
 }
 
 Module* Module::registerSensor(Sensor* sensor) {
+    Serial.println("Registering sensor");
+    Serial.println(sensor->description);
     this->sensors.push_back(sensor);
+    return this;
+}
+
+Module* Module::registerMultiSensor(IMultiMeasurementSensor* multiSensor) {
+    for (Sensor* s : multiSensor->sensors) {
+        registerSensor(s);
+    }
     return this;
 }
 
 bool Module::sendMessage(int sensorID, float measurement, int time) {
     // TODO test positive, negative, NAN
+    if(std::isnan(measurement)) return false;
+
     this->mqttClient.publish((this->topic + String(std::to_string(sensorID).c_str())).c_str(), (std::to_string(time) + ":" + std::to_string(measurement)).c_str());
     Serial.println(sensorID);
     Serial.println(std::to_string(measurement).c_str());
@@ -131,18 +139,20 @@ bool Module::sendMessage(int sensorID, float measurement, int time) {
 }
 
 bool Module::broadcast() {
-    // TODO sleep
     this->mqttClient.loop();
-
-
+    
     for(int i = 0; i < this->sensors.size(); i++) {
         Sensor* sensor = this->sensors[i];
-        // TODO current time each
-        // TODO millis() rollover - manage here or db
-        int time = -1;
-        this->sendMessage(i, sensor->takeMeasurement(), time);
+        float measurement = sensor->takeMeasurement();
+        if(!std::isnan(measurement) && sensor->enabled) {
+            // TODO current time each
+            // TODO millis() rollover - manage here or db
+            int time = -1;
+            this->sendMessage(i, sensor->takeMeasurement(), time);
+        }
     }
-
+    
+    // TODO sleep
     delay(30000);
 
     return false;
