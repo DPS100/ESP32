@@ -67,6 +67,14 @@ Module* Module::connect() {
         String jsonBody;
         serializeJson(doc, jsonBody);
 
+        bool connected = http.connect(broker.c_str(), 8000);
+        if(connected) {
+            Serial.println("Connected successfully");
+        } else {
+            Serial.println("Connection failed");
+
+        }
+
         // Prepare request
         http.beginRequest();
         Serial.println("Began\n");
@@ -96,22 +104,31 @@ Module* Module::connect() {
         if(!registeredBackend) exit(1);
     }
     
+    this->connectToMQTT();
 
-    Serial.println("\nAttempting to connect to the MQTT broker: \n");
-    if(!mqttClient.connected()) {
+    return this;
+}
+
+void Module::connectToMQTT() {
+    bool connected = mqttClient.connected();
+    while(!connected) {
+        Serial.println("\nAttempting to connect to the MQTT broker: \n");
         Serial.println(broker.c_str());
         Serial.println("\n");
     
         mqttClient.setServer(this->broker.c_str(), this->port);
+        mqttClient.setKeepAlive(30);
     
-        if (!mqttClient.connect(mac.c_str())) {
+        connected = mqttClient.connect(mac.c_str());
+        
+        if (!connected) {
             Serial.println("MQTT connection failed!\n");
-            // connect();
+            Serial.println(mqttClient.state());
+            delay(5000);
+        } else {
+            Serial.println("You're connected to the MQTT broker!\n");
         }
     }
-    Serial.println("You're connected to the MQTT broker!\n");
-
-    return this;
 }
 
 Module* Module::registerSensor(Sensor* sensor) {
@@ -122,6 +139,8 @@ Module* Module::registerSensor(Sensor* sensor) {
 }
 
 Module* Module::registerMultiSensor(IMultiMeasurementSensor* multiSensor) {
+    Serial.println("Initializing multi sensor");
+    registerSensor(multiSensor);
     for (Sensor* s : multiSensor->sensors) {
         registerSensor(s);
     }
@@ -131,10 +150,19 @@ Module* Module::registerMultiSensor(IMultiMeasurementSensor* multiSensor) {
 bool Module::sendMessage(int sensorID, float measurement, int time) {
     // TODO test positive, negative, NAN
     if(std::isnan(measurement)) return false;
-
-    this->mqttClient.publish((this->topic + String(std::to_string(sensorID).c_str())).c_str(), (std::to_string(time) + ":" + std::to_string(measurement)).c_str());
-    Serial.println(sensorID);
+  
+    bool success = mqttClient.publish(
+        (this->topic + String(std::to_string(sensorID).c_str())).c_str(),
+        (std::to_string(time) + ":" + std::to_string(measurement)).c_str()
+    );
+    
+    if (!success) {
+        Serial.println("Failed to publish, attempting reconnect...");
+        this->connectToMQTT();
+    }
+    
     Serial.println(std::to_string(measurement).c_str());
+    Serial.println(std::to_string(sensorID).c_str());
     return true;
 }
 
@@ -144,6 +172,7 @@ bool Module::broadcast() {
     for(int i = 0; i < this->sensors.size(); i++) {
         Sensor* sensor = this->sensors[i];
         float measurement = sensor->takeMeasurement();
+        Serial.println(sensor->description.c_str());
         if(!std::isnan(measurement) && sensor->enabled) {
             // TODO current time each
             // TODO millis() rollover - manage here or db
@@ -153,7 +182,10 @@ bool Module::broadcast() {
     }
     
     // TODO sleep
-    delay(30000);
+    for(int i = 0; i < 240; i++) { // TODO sample and averages
+        this->mqttClient.loop();
+        delay(1000);
+    }
 
     return false;
 }

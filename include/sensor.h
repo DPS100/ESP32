@@ -9,7 +9,7 @@ class Sensor {
         Sensor(String description, bool enabled) : description(description), enabled(enabled) {}
         virtual float takeMeasurement() = 0;
         String description;
-        const bool enabled;
+        bool enabled;
 };
 
 #endif

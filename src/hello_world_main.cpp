@@ -17,11 +17,11 @@ Module* module = nullptr;
 void setup()
 {
     Serial.begin(115200);
-    delay(2000);
+    delay(5000);
     Serial.println("Initializing...");
 
     module = Module::getInstance(true)
-        ->registerSensor(new DebugSensor())
+        ->registerSensor(new DebugSensor(false))
         ->registerSensor(new LightSensor()) // TODO singleton on pins? Throw error? Throw errors to broker?
         ->registerSensor(new CO2Sensor())
         ->registerMultiSensor(new BMESensor())

@@ -48,6 +48,7 @@ class Module{
         String topic = "sensor_service/" + mac + "/";
         // void callback(char* topic, byte* payload, unsigned int length);
         bool sendMessage(int sensorID, float measurement, int time);
+        void connectToMQTT();
         bool registeredBackend = false;
 };
 
